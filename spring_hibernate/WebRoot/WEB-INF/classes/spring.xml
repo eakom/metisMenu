@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+       http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+       http://www.springframework.org/schema/mvc 
+       http://www.springframework.org/schema/mvc/spring-mvc-4.1.xsd   
+       http://www.springframework.org/schema/aop   
+       http://www.springframework.org/schema/aop/spring-aop-4.1.xsd   
+       http://www.springframework.org/schema/context   
+       http://www.springframework.org/schema/context/spring-context.xsd"
+	xmlns:mvc="http://www.springframework.org/schema/mvc" 
+	xmlns:context="http://www.springframework.org/schema/context">
+
+	<mvc:annotation-driven />
+	
+	<!--<context:component-scan base-package="com.GY.core.*.model" />
+
+	<bean class="com.GY.util.FileUploadConfig" />
+	
+	  将多个配置文件读取到容器中，交给Spring管理 -->
+	<bean id="configProperties"  class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations">
+			<list>
+				<value>classpath:jdbc.properties</value>
+			</list>
+		</property>
+	</bean>
+	
+	<!-- 数据源连接配置 -->
+	<bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<property name="driverClassName">
+			<value>${driver_class}</value>
+		</property>
+		<property name="url">
+			<value>${url}</value>
+		</property>
+		<property name="username">
+			<value>${username}</value>
+		</property>
+		<property name="password">
+			<value>${password}</value>
+		</property>
+	</bean>
+	<!-- 带了连接池的数据源连接配置 -->
+	<!-- <bean id= "dataSource" class = "com.mchange.v2.c3p0.ComboPooledDataSource" >  
+		<property name= "user"  value= "${user}" />   
+		<property name= "password"  value= "${password}" />   
+		<property name= "jdbcUrl"  value= "${url}" />   
+		<property name= "driverClass"  value= "${driver_class}" />   
+		  
+		<property name= "checkoutTimeout"  value= "${checkoutTimeout}" />   
+		<property name= "idleConnectionTestPeriod"  value= "${idleConnectionTestPeriod}" />   
+		<property name= "initialPoolSize"  value= "${initialPoolSize}" />   
+		<property name= "maxIdleTime"  value= "${maxIdleTime}" />   
+		<property name= "acquireIncrement"  value= "${acquireIncrement}" />   
+		
+		<property name= "maxPoolSize"  value= "${maxPoolSize}" />   
+		<property name= "minPoolSize"  value= "${minPoolSize}" />   
+		<property name= "maxStatements"  value= "${maxStatements}" />   
+	</bean>   -->
+	
+	<!-- hibernate 属性配置 -->
+	<bean id="hibernateProperties"
+		class="org.springframework.beans.factory.config.PropertiesFactoryBean">
+		<property name="properties">
+			<props>
+				<prop key="hibernate.dialect">${sql.dialect}</prop>
+				<prop key="hibernate.show_sql">true</prop>
+				<prop key="hibernate.cglib.use_reflection_optimizer">false</prop>
+				<prop key="hibernate.cache.use_query_cache">true</prop>
+				<prop key="hibernate.cache.use_second_level_cache">true</prop>
+				<prop key="hibernate.cache.provider_class">org.hibernate.cache.EhCacheProvider</prop>
+				<!-- 自动建表 -->
+				<prop key="hibernate.hbm2ddl.auto">update</prop>
+				<!-- weblogic 8 需要设置这个，否则会报错 <prop key="hibernate.query.factory_class">org.hibernate.hql.classic.ClassicQueryTranslatorFactory</prop> -->
+			</props>
+		</property>
+	</bean>
+	
+	<!-- 处理(Blob,Clob) -->
+	<bean id="nativeJdbcExtractor" lazy-init="true"
+		class="org.springframework.jdbc.support.nativejdbc.SimpleNativeJdbcExtractor">
+	</bean>
+	
+	<!-- Oraclr 处理lob字段 -->
+	<bean id="lobHandler" lazy-init="true"
+		class="org.springframework.jdbc.support.lob.OracleLobHandler">
+		<property name="nativeJdbcExtractor">
+			<ref bean="nativeJdbcExtractor" />
+		</property>
+	</bean>
+	<!-- session工厂配置 -->
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
+		<property name="dataSource">
+			<ref bean="dataSource" />
+		</property>
+		<property name="lobHandler" ref="lobHandler" />
+		<property name="hibernateProperties" ref="hibernateProperties" />
+		<property name="configLocations">
+			<!-- 配置 hibernate Mapping  -->
+			<value> classpath*:hibernate.cfg.xml</value>
+		</property>
+	</bean>
+	
+	<bean id="transactionManager"
+		class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+		<property name="sessionFactory" ref="sessionFactory" />
+	</bean>
+
+	<!-- 事务处理的AOP配置 -->
+	<bean id="proxyTemplate" abstract="true"
+		class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="transactionAttributes">
+			<props>
+				<prop key="find*">PROPAGATION_REQUIRED,readOnly</prop>
+				<prop key="update*">PROPAGATION_REQUIRED</prop>
+				<prop key="delete*">PROPAGATION_REQUIRED</prop>
+				<prop key="execute*">PROPAGATION_REQUIRED</prop>
+				<prop key="save*">PROPAGATION_REQUIRED</prop>
+				<prop key="add*">PROPAGATION_REQUIRED</prop>
+				<prop key="get*">PROPAGATION_REQUIRED,readOnly</prop>
+				<prop key="init*">PROPAGATION_REQUIRED,readOnly</prop>
+				<prop key="load*">PROPAGATION_REQUIRED,readOnly</prop>
+				<prop key="*">PROPAGATION_REQUIRED</prop>
+			</props>
+		</property>
+	</bean>
+</beans>
